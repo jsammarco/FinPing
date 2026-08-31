@@ -1171,9 +1171,11 @@ static void draw_message(Canvas* c, App* app) {
     for(uint8_t y = 0; y < 4; y++) {
         for(uint8_t x = 0; x < 4; x++) {
             int bx = 5 + (int)x * 30;
-            int by = 34 + (int)y * 6;
+            // Six-pixel-tall selector cells with an eight-pixel row pitch
+            // leave two blank pixels between DTMF rows.
+            int by = 31 + (int)y * 8;
             if(x == app->keypad_x && y == app->keypad_y) {
-                canvas_draw_box(c, bx - 2, by - 6, 20, 8);
+                canvas_draw_box(c, bx - 2, by - 5, 20, 6);
                 canvas_set_color(c, ColorWhite);
             }
             char key[2] = {keypad[y][x], 0};
@@ -1187,9 +1189,9 @@ static void draw_message(Canvas* c, App* app) {
     static const char* actions[] = {"P", "LP", "OK", "DEL"};
     for(uint8_t x = 0; x < 4; x++) {
         int bx = 5 + (int)x * 30;
-        int by = 62;
+        int by = 63;
         if(x == app->keypad_x && app->keypad_y == 4) {
-            canvas_draw_box(c, bx - 2, by - 7, 25, 9);
+            canvas_draw_box(c, bx - 2, by - 5, 25, 6);
             canvas_set_color(c, ColorWhite);
         }
         canvas_draw_str(c, bx + 2, by, actions[x]);
