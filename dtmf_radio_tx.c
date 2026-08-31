@@ -39,17 +39,20 @@
 #define FREQ_MIN_HZ 387000000u
 #define FREQ_MAX_HZ 464000000u
 #define FREQ_STEP_COUNT 7u
-#define MENU_ITEM_COUNT 5u
+#define MENU_ITEM_COUNT 6u
 #define INTERVAL_OPTION_COUNT 7u
+#define SPLASH_DURATION_MS 1500u
 #define FREQUENCY_DIGIT_COUNT 8u
 #define SETTINGS_MAGIC 0x44544D46u
 #define SETTINGS_VERSION 4u
 
 typedef enum {
-    ScreenMenu = 0,
+    ScreenSplash = 0,
+    ScreenMenu,
     ScreenMessage,
     ScreenFrequency,
     ScreenInterval,
+    ScreenAbout,
 } AppScreen;
 
 typedef enum {
@@ -183,6 +186,7 @@ typedef struct {
     DialogsApp* dialogs;
 
     AppScreen screen;
+    uint32_t splash_until_tick;
     AppSettings settings;
 
     char sequence[MAX_SEQUENCE + 1];
@@ -1093,14 +1097,14 @@ static const char* tx_status_text(TxState state) {
     }
 }
 
-static void draw_menu_item(Canvas* c, uint8_t row, uint8_t selected, const char* text) {
+static void draw_menu_item(Canvas* c, uint8_t row, bool selected, const char* text) {
     int y = 20 + (int)row * 8;
-    if(row == selected) {
+    if(selected) {
         canvas_draw_box(c, 1, y - 6, 126, 8);
         canvas_set_color(c, ColorWhite);
     }
     canvas_draw_str(c, 4, y, text);
-    if(row == selected) canvas_set_color(c, ColorBlack);
+    if(selected) canvas_set_color(c, ColorBlack);
 }
 
 static void draw_menu(Canvas* c, App* app) {
@@ -1118,22 +1122,45 @@ static void draw_menu(Canvas* c, App* app) {
         "Message: %.18s",
         app->sequence_len ? formatted_message : "(empty)");
 
-    draw_menu_item(c, 0, app->menu_index, "Send RF");
-    draw_menu_item(c, 1, app->menu_index, message);
-
     char frequency_item[32];
     snprintf(frequency_item, sizeof(frequency_item), "Frequency: %s", frequency);
-    draw_menu_item(c, 2, app->menu_index, frequency_item);
-
     char interval_item[32];
     snprintf(
         interval_item,
         sizeof(interval_item),
         "Interval: %s",
         interval_labels[app->settings.interval_index]);
-    draw_menu_item(c, 3, app->menu_index, interval_item);
 
-    draw_menu_item(c, 4, app->menu_index, "Call Sign Audio");
+    // Five rows fit above the footer. Keep the selected item visible when
+    // navigating to the sixth item, About.
+    uint8_t first_visible = 0;
+    if(app->menu_index >= 5u) first_visible = app->menu_index - 4u;
+    for(uint8_t row = 0; row < 5u && first_visible + row < MENU_ITEM_COUNT; row++) {
+        uint8_t item = first_visible + row;
+        const char* text = "";
+        switch(item) {
+        case 0:
+            text = "Send RF";
+            break;
+        case 1:
+            text = message;
+            break;
+        case 2:
+            text = frequency_item;
+            break;
+        case 3:
+            text = interval_item;
+            break;
+        case 4:
+            text = "Call Sign Audio";
+            break;
+        case 5:
+        default:
+            text = "About";
+            break;
+        }
+        draw_menu_item(c, row, item == app->menu_index, text);
+    }
 
     canvas_draw_line(c, 0, 56, 127, 56);
     if(app->tx_state == TxStateIdle && app->menu_index == 4) {
@@ -1152,9 +1179,24 @@ static void draw_menu(Canvas* c, App* app) {
         canvas_draw_str(c, 2, 63, schedule_status);
     } else if(app->tx_state == TxStateIdle && app->menu_index == 0 && app->interval_armed) {
         canvas_draw_str(c, 2, 63, "LEFT stops schedule");
+    } else if(app->tx_state == TxStateIdle && app->menu_index == 5) {
+        canvas_draw_str(c, 2, 63, "OK: view app info");
     } else {
         canvas_draw_str(c, 2, 63, tx_status_text(app->tx_state));
     }
+}
+
+static void draw_splash(Canvas* c) {
+    const char* title = "FinPing";
+    const char* credit = "Made by ConsultingJoe";
+
+    canvas_set_font(c, FontPrimary);
+    uint16_t title_width = canvas_string_width(c, title);
+    canvas_draw_str(c, (SCREEN_W - title_width) / 2, 31, title);
+
+    canvas_set_font(c, FontSecondary);
+    uint16_t credit_width = canvas_string_width(c, credit);
+    canvas_draw_str(c, (SCREEN_W - credit_width) / 2, 43, credit);
 }
 
 static void draw_message(Canvas* c, App* app) {
@@ -1240,13 +1282,25 @@ static void draw_interval(Canvas* c, App* app) {
     canvas_draw_str(c, 2, 63, "OK save  BACK cancel");
 }
 
+static void draw_about(Canvas* c) {
+    draw_header(c, "About FinPing");
+    canvas_set_font(c, FontSecondary);
+    canvas_draw_str(c, 2, 24, "Made by ConsultingJoe");
+    canvas_draw_str(c, 2, 34, "ConsultingJoe.com");
+    canvas_draw_str(c, 2, 46, "Sends DTMF and WAV audio");
+    canvas_draw_str(c, 2, 54, "over experimental Sub-GHz RF.");
+    canvas_draw_str(c, 2, 63, "BACK: menu");
+}
+
 static void draw_callback(Canvas* c, void* context) {
     App* app = context;
     canvas_clear(c);
-    if(app->screen == ScreenMenu) draw_menu(c, app);
+    if(app->screen == ScreenSplash) draw_splash(c);
+    else if(app->screen == ScreenMenu) draw_menu(c, app);
     else if(app->screen == ScreenMessage) draw_message(c, app);
     else if(app->screen == ScreenFrequency) draw_frequency(c, app);
-    else draw_interval(c, app);
+    else if(app->screen == ScreenInterval) draw_interval(c, app);
+    else draw_about(c);
 }
 
 static void input_callback(InputEvent* event, void* context) {
@@ -1316,8 +1370,10 @@ static bool handle_menu(App* app, const InputEvent* e) {
             } else if(app->menu_index == 3) {
                 app->interval_edit_index = app->settings.interval_index;
                 app->screen = ScreenInterval;
-            } else {
+            } else if(app->menu_index == 4) {
                 audio_select_file(app);
+            } else {
+                app->screen = ScreenAbout;
             }
             break;
         case InputKeyBack:
@@ -1430,6 +1486,14 @@ static bool handle_interval(App* app, const InputEvent* e) {
     return true;
 }
 
+static bool handle_about(App* app, const InputEvent* e) {
+    if((e->type == InputTypeShort || e->type == InputTypeLong) &&
+       e->key == InputKeyBack) {
+        app->screen = ScreenMenu;
+    }
+    return true;
+}
+
 static void app_cleanup(App* app) {
     radio_stop(app);
 
@@ -1473,7 +1537,8 @@ int32_t finping_app(void* p) {
     memcpy(app->sequence, app->settings.sequence, app->sequence_len);
     app->sequence[app->sequence_len] = '\0';
 
-    app->screen = ScreenMenu;
+    app->screen = ScreenSplash;
+    app->splash_until_tick = furi_get_tick() + SPLASH_DURATION_MS;
     app->tx_state = TxStateIdle;
     app->actual_frequency_hz = app->settings.frequency_hz;
 
@@ -1488,14 +1553,22 @@ int32_t finping_app(void* p) {
 
     bool running = true;
     while(running) {
+        if(app->screen == ScreenSplash &&
+           (int32_t)(furi_get_tick() - app->splash_until_tick) >= 0) {
+            app->screen = ScreenMenu;
+        }
+
         radio_poll(app);
 
         InputEvent e;
         if(furi_message_queue_get(app->queue, &e, 25) == FuriStatusOk) {
-            if(app->screen == ScreenMenu) running = handle_menu(app, &e);
+            if(app->screen == ScreenSplash) {
+                // Ignore queued input until the startup screen has finished.
+            } else if(app->screen == ScreenMenu) running = handle_menu(app, &e);
             else if(app->screen == ScreenMessage) running = handle_message(app, &e);
             else if(app->screen == ScreenFrequency) running = handle_frequency(app, &e);
-            else running = handle_interval(app, &e);
+            else if(app->screen == ScreenInterval) running = handle_interval(app, &e);
+            else running = handle_about(app, &e);
         }
 
         view_port_update(app->view_port);

@@ -14,7 +14,8 @@ That means this is experimental. It may work well, poorly, or not at all dependi
 
 ## Features
 
-- Main menu: **Send RF**, **Message**, **Frequency**, **Interval**, and **Call Sign Audio**
+- Startup screen and About page with ConsultingJoe attribution
+- Main menu: **Send RF**, **Message**, **Frequency**, **Interval**, **Call Sign Audio**, and **About**
 - Full 4x4 DTMF message keypad: 0-9, A-D, `*`, `#`
 - **P** button for a 1-second pause and **LP** for a 3-second pause
 - On-screen **OK** button to finish message editing
@@ -34,11 +35,12 @@ That means this is experimental. It may work well, poorly, or not at all dependi
 
 ### Main menu
 
-- Up/Down: select Send RF, Message, Frequency, Interval, or Call Sign Audio
+- Up/Down: select Send RF, Message, Frequency, Interval, Call Sign Audio, or About
 - OK on Send RF: transmit the optional WAV preamble, then the current DTMF message. With an interval selected, this starts the repeating schedule after the first send.
 - OK on Message/Frequency: open that editor
 - OK on Interval: choose One Shot or a repeat interval
 - OK on Call Sign Audio: choose a WAV file from the SD card
+- OK on About: view the app attribution, website, and summary
 - Left on Call Sign Audio: clear the selected WAV file
 - Left on Send RF: stop a pending repeating schedule
 - Back: exit the app
