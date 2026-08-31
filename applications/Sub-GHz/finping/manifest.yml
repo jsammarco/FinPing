@@ -1,0 +1,15 @@
+sourcecode:
+  type: git
+  location:
+    origin: https://github.com/jsammarco/FinPing.git
+    # Replace with the full SHA of the public commit that contains this release.
+    commit_sha: a3bf939653659be5b3deb8efa2c76bd860055cda
+short_description: Experimental DTMF and WAV RF pinger using CC1101 2-FSK/PDM
+description: "@flipper-readme.md"
+changelog: "@docs/changelog.md"
+screenshots:
+  - screenshots/ss0.png
+name: FinPing
+id: finping
+category: Sub-GHz
+version: "1.11"

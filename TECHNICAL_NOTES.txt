@@ -1,0 +1,41 @@
+FinPing technical notes
+
+Current implementation status: TX only. RF reception and DTMF decoding are planned
+future work and are not present in this build.
+
+Core idea:
+  PCM WAV preamble or DTMF sine pair -> pulse-density modulation -> CC1101 async 2-FSK input
+
+WAV support:
+  Mono or stereo, uncompressed PCM only; 8-bit unsigned or 16-bit signed,
+  with 8-48 kHz source sample rates. Stereo is downmixed and source rates above
+  16 kHz are downsampled before samples are preloaded into RAM and sent to the
+  20 kHz PDM stream. MP3 decoding is intentionally not included.
+
+Message pause tokens:
+  P  = 1 second of silence
+  LP = 3 seconds of silence
+
+Sample rate:
+  20 kHz / 50 us per PDM symbol
+
+CC1101 preset:
+  FuriHalSubGhzPreset2FSKDev238Async
+
+Expected behavior:
+  CC1101 toggles between carrier +/- ~2.38 kHz.
+  The time-average frequency shift follows the DTMF waveform.
+  A normal FM discriminator followed by receiver low-pass filtering should reconstruct
+  the two DTMF tones sufficiently for some decoders.
+
+This is intentionally not implemented as OOK RAW data: OOK would amplitude-key the
+carrier rather than approximate frequency modulation.
+
+Potential next experiments if decode is marginal:
+  1. Custom CC1101 async preset with a higher configured data rate.
+  2. 24/32/40 ksample/s PDM.
+  3. Second-order sigma-delta instead of first-order pulse-density accumulation.
+  4. Per-tone twist adjustment (high group -2 dB).
+  5. Soft attack/release envelopes to reduce clicks.
+  6. Calibration screen that repeatedly transmits a chosen digit.
+  7. Scope/test-tone modes: 697, 770, 852, 941, 1209, 1336, 1477, 1633 Hz.

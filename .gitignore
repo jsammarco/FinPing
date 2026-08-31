@@ -1,0 +1,16 @@
+# uFBT build outputs
+/dist/
+/build/
+*.fap
+*.elf
+*.map
+
+# Generated editor metadata
+/.vscode/compile_commands.json
+
+# Local tooling and operating-system files
+/.ufbt/
+__pycache__/
+*.py[cod]
+.DS_Store
+Thumbs.db
