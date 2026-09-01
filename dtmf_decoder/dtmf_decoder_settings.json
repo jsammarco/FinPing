@@ -1,0 +1,54 @@
+{
+  "selected_device": {
+    "name": "Microphone (AIOC Audio)",
+    "hostapi": 0
+  },
+  "actions": [
+    {
+      "name": "8675309",
+      "sequence": "8675309",
+      "type": "sound",
+      "target": "C:/Users/Joe/Projects/dtmf_decoder/8675309.mp3",
+      "arguments": ""
+    },
+    {
+      "name": "Toggle Lights",
+      "sequence": "1234",
+      "type": "sound",
+      "target": "C:/Users/Joe/Projects/dtmf_decoder/toggle_lights.mp3",
+      "arguments": ""
+    }
+  ],
+  "detections": [
+    {
+      "timestamp": "2026-08-31T22:44:26.672",
+      "sequence": "1234",
+      "tone_count": 4
+    },
+    {
+      "timestamp": "2026-08-31T22:44:44.111",
+      "sequence": "1234",
+      "tone_count": 4
+    },
+    {
+      "timestamp": "2026-08-31T22:45:15.510",
+      "sequence": "1234",
+      "tone_count": 4
+    },
+    {
+      "timestamp": "2026-08-31T22:46:21.269",
+      "sequence": "1234",
+      "tone_count": 4
+    },
+    {
+      "timestamp": "2026-08-31T22:47:50.068",
+      "sequence": "1234",
+      "tone_count": 4
+    },
+    {
+      "timestamp": "2026-08-31T22:48:08.230",
+      "sequence": "1234",
+      "tone_count": 4
+    }
+  ]
+}
