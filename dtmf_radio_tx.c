@@ -40,6 +40,7 @@
 #define FREQ_MAX_HZ 464000000u
 #define FREQ_STEP_COUNT 7u
 #define MENU_ITEM_COUNT 6u
+#define MENU_VISIBLE_ROWS 4u
 #define INTERVAL_OPTION_COUNT 7u
 #define SPLASH_DURATION_MS 1500u
 #define FREQUENCY_DIGIT_COUNT 8u
@@ -1098,9 +1099,9 @@ static const char* tx_status_text(TxState state) {
 }
 
 static void draw_menu_item(Canvas* c, uint8_t row, bool selected, const char* text) {
-    int y = 20 + (int)row * 8;
+    int y = 21 + (int)row * 10;
     if(selected) {
-        canvas_draw_box(c, 1, y - 6, 126, 8);
+        canvas_draw_box(c, 1, y - 7, 126, 9);
         canvas_set_color(c, ColorWhite);
     }
     canvas_draw_str(c, 4, y, text);
@@ -1119,23 +1120,27 @@ static void draw_menu(Canvas* c, App* app) {
     snprintf(
         message,
         sizeof(message),
-        "Message: %.18s",
+        "Msg: %.12s",
         app->sequence_len ? formatted_message : "(empty)");
 
     char frequency_item[32];
-    snprintf(frequency_item, sizeof(frequency_item), "Frequency: %s", frequency);
+    snprintf(frequency_item, sizeof(frequency_item), "Freq: %s", frequency);
     char interval_item[32];
     snprintf(
         interval_item,
         sizeof(interval_item),
-        "Interval: %s",
+        "Int: %s",
         interval_labels[app->settings.interval_index]);
 
-    // Five rows fit above the footer. Keep the selected item visible when
-    // navigating to the sixth item, About.
+    // Four rows leave enough breathing room for the full FontSecondary glyphs.
+    // Keep the selected item visible when navigating the longer menu.
     uint8_t first_visible = 0;
-    if(app->menu_index >= 5u) first_visible = app->menu_index - 4u;
-    for(uint8_t row = 0; row < 5u && first_visible + row < MENU_ITEM_COUNT; row++) {
+    if(app->menu_index >= MENU_VISIBLE_ROWS) {
+        first_visible = app->menu_index - (MENU_VISIBLE_ROWS - 1u);
+    }
+    for(uint8_t row = 0;
+        row < MENU_VISIBLE_ROWS && first_visible + row < MENU_ITEM_COUNT;
+        row++) {
         uint8_t item = first_visible + row;
         const char* text = "";
         switch(item) {
@@ -1162,7 +1167,7 @@ static void draw_menu(Canvas* c, App* app) {
         draw_menu_item(c, row, item == app->menu_index, text);
     }
 
-    canvas_draw_line(c, 0, 56, 127, 56);
+    canvas_draw_line(c, 0, 55, 127, 55);
     if(app->tx_state == TxStateIdle && app->menu_index == 4) {
         if(app->settings.audio_path[0]) {
             canvas_draw_str(c, 2, 63, audio_filename(app->settings.audio_path));
@@ -1200,24 +1205,42 @@ static void draw_splash(Canvas* c) {
 }
 
 static void draw_message(Canvas* c, App* app) {
-    draw_header(c, "DTMF Message");
+    canvas_set_font(c, FontPrimary);
+    canvas_draw_str(c, 2, 9, "DTMF");
     canvas_set_font(c, FontSecondary);
 
     char formatted_message[66];
     char message[80];
     sequence_format(formatted_message, sizeof(formatted_message), app->sequence, app->sequence_len);
-    snprintf(message, sizeof(message), ">%s_", formatted_message);
-    canvas_draw_str(c, 2, 22, message);
-    canvas_draw_line(c, 0, 25, 127, 25);
+    const char* message_tail = formatted_message;
+    size_t formatted_length = strlen(formatted_message);
+    if(formatted_length > 12u) message_tail += formatted_length - 12u;
+    snprintf(message, sizeof(message), ">%s_", message_tail);
+    canvas_draw_str(c, 38, 9, message);
+    canvas_draw_line(c, 0, 11, 127, 11);
+
+    static const char* actions[] = {"P", "LP", "OK", "DEL"};
+    for(uint8_t x = 0; x < 4; x++) {
+        int bx = 5 + (int)x * 30;
+        int by = 20;
+        if(x == app->keypad_x && app->keypad_y == 4) {
+            canvas_draw_box(c, bx - 2, by - 7, 25, 8);
+            canvas_set_color(c, ColorWhite);
+        }
+        canvas_draw_str(c, bx + 2, by, actions[x]);
+        if(x == app->keypad_x && app->keypad_y == 4) {
+            canvas_set_color(c, ColorBlack);
+        }
+    }
 
     for(uint8_t y = 0; y < 4; y++) {
         for(uint8_t x = 0; x < 4; x++) {
             int bx = 5 + (int)x * 30;
-            // Six-pixel-tall selector cells with an eight-pixel row pitch
-            // leave two blank pixels between DTMF rows.
-            int by = 31 + (int)y * 8;
+            // Eight-pixel-tall selector cells with a ten-pixel row pitch
+            // leave two blank pixels above and below every DTMF row.
+            int by = 30 + (int)y * 10;
             if(x == app->keypad_x && y == app->keypad_y) {
-                canvas_draw_box(c, bx - 2, by - 5, 20, 6);
+                canvas_draw_box(c, bx - 2, by - 7, 20, 8);
                 canvas_set_color(c, ColorWhite);
             }
             char key[2] = {keypad[y][x], 0};
@@ -1225,20 +1248,6 @@ static void draw_message(Canvas* c, App* app) {
             if(x == app->keypad_x && y == app->keypad_y) {
                 canvas_set_color(c, ColorBlack);
             }
-        }
-    }
-
-    static const char* actions[] = {"P", "LP", "OK", "DEL"};
-    for(uint8_t x = 0; x < 4; x++) {
-        int bx = 5 + (int)x * 30;
-        int by = 63;
-        if(x == app->keypad_x && app->keypad_y == 4) {
-            canvas_draw_box(c, bx - 2, by - 5, 25, 6);
-            canvas_set_color(c, ColorWhite);
-        }
-        canvas_draw_str(c, bx + 2, by, actions[x]);
-        if(x == app->keypad_x && app->keypad_y == 4) {
-            canvas_set_color(c, ColorBlack);
         }
     }
 }
