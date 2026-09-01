@@ -2,7 +2,7 @@
 
 FinPing is an experimental Flipper Zero DTMF-over-RF transmitter using the internal CC1101. It sends DTMF tones and an optional WAV audio preamble; RF reception and DTMF decoding are not included.
 
-https://www.youtube.com/shorts/PtGTxKcq2rU
+https://www.youtube.com/shorts/uwiEwrWLfrw
 
 ## What it is doing
 
